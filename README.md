@@ -7,6 +7,7 @@
 
 ```
 TrendXiv/
+├── LICENSE                            # CC BY-NC 4.0 라이선스 전문
 ├── README.md                          # 프로젝트 종합 소개 (본 파일)
 ├── .gitignore                         # 대용량 CSV, .env 등 제외 설정
 │
