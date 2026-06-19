@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { font-family: 'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif; color:#333; }
+  .slide {
+    width:1280px; height:720px; position:relative; padding:55px 75px 45px 75px;
+    page-break-after: always; overflow:hidden; display:flex; flex-direction:column;
+  }
+  .slide:last-child { page-break-after: avoid; }
+
+  h1.slide-title { font-size:30px; font-weight:800; color:#1F3864; margin-bottom:18px; line-height:1.3; }
+  h2.section { font-size:18px; font-weight:800; margin:16px 0 8px; color:#222; }
+  p.lead { font-size:16px; line-height:1.6; margin-bottom:6px; }
+  ul { margin-left:22px; }
+  li { margin-bottom:7px; line-height:1.5; font-size:15px; }
+  li > ul { margin-top:4px; }
+  .tag { background:#eee; padding:2px 6px; border-radius:4px; font-family:'Courier New',monospace; font-size:13px; }
+  .page-num { position:absolute; bottom:22px; right:35px; color:#aaa; font-size:14px; }
+
+  .row { display:flex; gap:24px; flex:1; min-height:0; }
+  .img-box { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:0; }
+  .img-box img { max-width:100%; max-height:100%; object-fit:contain; }
+  .img-full { flex:1; display:flex; justify-content:center; align-items:center; min-height:0; margin-top:6px; }
+  .img-full img { max-width:100%; max-height:100%; object-fit:contain; }
+  .caption { font-size:13px; color:#777; text-align:center; margin-top:4px; }
+
+  table { border-collapse: collapse; width:100%; margin-top:10px; }
+  th, td { border:1px solid #ccc; padding:8px 14px; text-align:center; font-size:15px; }
+  th { background:#f2f2f2; }
+
+  /* Title slide */
+  .title-slide { justify-content:center; }
+  .title-slide h1 { font-size:40px; font-weight:800; color:#1F3864; line-height:1.4; margin-bottom:40px; }
+  .title-slide p { font-size:18px; margin-bottom:8px; }
+  .title-slide b { font-weight:700; }
+</style>
+</head>
+<body>
+
+<!-- Slide 1: Title -->
+<div class="slide title-slide">
+  <h1>주성분분석 및 트렌드 분류를 활용한<br>arXiv 논문 파급력 예측</h1>
+  <p><b>팀명</b>: Team 05</p>
+  <p><b>과목명</b>: 데이터 마이닝</p>
+  <div class="page-num">1</div>
+</div>
+
+<!-- Slide 2: 소개 -->
+<div class="slide">
+  <h1 class="slide-title">1. 소개 (Introduction)</h1>
+  <h2 class="section">배경 및 문제제기</h2>
+  <ul>
+    <li>최근 AI 및 과학 기술의 급격한 발전으로 arXiv에 등록되는 논문의 수가 기하급수적으로 증가하고 있습니다 (특히 2026년 초 폭발적 증가).</li>
+    <li>수많은 논문 속에서 "어떤 논문이 향후 일주일간 트렌드(가장 많이 읽히고 공유될 논문)가 될 것인가?"를 사전에 예측하는 것은 연구자들에게 매우 중요한 가치를 지닙니다.</li>
+  </ul>
+  <h2 class="section">가설 및 목표</h2>
+  <ul>
+    <li><b>가설</b>: 논문의 메타데이터(제목 길이, 특정 단어의 인기도, 출판 여부)와 속한 학문 분야의 특성을 결합하면, 해당 논문의 단기 트렌드 지수(<span class="tag">Avg_MA_7D</span>)를 예측할 수 있을 것이다.</li>
+    <li><b>목표</b>: 데이터 마이닝의 분류(Classification) 기법 및 선형회귀를 활용하여, 논문의 트렌드 수준(Low / Mid / High)을 예측하고 두 접근의 성능을 비교한다.</li>
+  </ul>
+  <div class="page-num">2</div>
+</div>
+
+<!-- Slide 3: 데이터 및 전처리 -->
+<div class="slide">
+  <h1 class="slide-title">2. 방법 (Methods) - 데이터 및 전처리</h1>
+  <div class="row">
+    <div style="flex:1.3; display:flex; flex-direction:column;">
+      <h2 class="section">데이터 설명</h2>
+      <ul>
+        <li><b>수집 데이터</b>: arXiv 논문 메타데이터 약 82,688건 (2025년 ~ 2026년 4월 중심)</li>
+        <li><b>주요 특징(Features)</b>: 8개 (제목 길이, 단어 수, 제목 인기도 점수, DOI 인용률, 출판 여부 등)</li>
+      </ul>
+      <h2 class="section">핵심 전처리 로직</h2>
+      <ul>
+        <li><b>분야 지배효과 보정 (<span class="tag">Category_Covariance_norm</span>)</b>: 특정 학문 분야(예: cs.CL) 자체가 가지는 인기도가 논문의 개별 인기도를 묻히게 하는 현상을 발견했습니다. 이를 해결하기 위해 분야별 평균 Covariance로 데이터를 정규화하여, 논문 <b>고유의 특징(Intrinsic)</b>이 잘 드러나도록 설계했습니다.</li>
+        <li><b>타겟 변수 선정 과정</b>:
+          <ul>
+            <li>초기 타겟 <span class="tag">CitationCount</span> 제외: 논문 나이에 비례해 증가하는 <b>시간 편향</b>이 심각 (0~3개월 평균 2.1회 vs. 5년+ 28.2회, 약 13.4배 차이)</li>
+            <li><span class="tag">Avg_MA_7D</span> 채택: "지금 이 분야가 얼마나 활발히 읽히는가"를 직접 반영하는 카테고리별 7일 이동평균으로 전환</li>
+            <li><b>두 가지 접근 비교</b>: <span class="tag">Avg_MA_7D</span>는 연속형 값이므로 <b>선형회귀(회귀 문제)</b>와 <b>3분위 이산화 후 분류(분류 문제)</b>를 모두 시도했습니다. 수업에서 배운 KNN·Bagging·AdaBoost는 분류 알고리즘이므로, 3분위수로 균등 분할하여 <b>Low / Mid / High</b> (각 ~27,550건, 클래스 불균형 방지) → 두 접근의 비교 결과는 4-5절에서 확인합니다.</li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+    <div class="img-box" style="flex:1;">
+      <img src="../outputs/figures/data_overview.png">
+      <div class="caption">월별 논문 수집 현황 (2025년 1월 ~ 2026년 4월, 총 82,688건)</div>
+    </div>
+  </div>
+  <div class="page-num">3</div>
+</div>
+
+<!-- Slide 4: Raw Data Distribution (NEW) -->
+<div class="slide">
+  <h1 class="slide-title">2-1. 방법 (Methods) - PCA 투입 전: 원본 데이터 분포</h1>
+  <ul>
+    <li>PCA를 수행하기 전, 15개 피처 각각의 <b>원본 분포(히스토그램)</b>를 확인했습니다. 평균(μ)과 표준편차(σ)가 변수마다 극단적으로 다릅니다.</li>
+    <li>예: <span class="tag">Category_Covariance</span> σ ≈ 252 vs. <span class="tag">DOI_is_published</span> σ ≈ 0.4 → 스케일 차이가 수백 배 이상으로, <b>그대로 PCA에 투입하면 분산이 큰 변수가 주성분을 독점</b>하는 문제가 발생합니다.</li>
+    <li>이 관찰이 다음 슬라이드의 "표준화 전/후 비교" 실험의 출발점이 되었습니다.</li>
+  </ul>
+  <div class="img-full">
+    <img src="../outputs/figures/0_raw_data_distribution.png">
+  </div>
+  <div class="page-num">4</div>
+</div>
+
+<!-- Slide 5: PCA1 -->
+<div class="slide">
+  <h1 class="slide-title">2-2. 방법 (Methods) - PCA: 왜 표준화가 필요한가</h1>
+  <ul>
+    <li><b>표준화 전</b>: <span class="tag">Category_Covariance</span> 변수의 분산(≈63,634)이 다른 변수에 비해 압도적으로 커서, 첫 번째 주성분(PC1)이 전체 분산의 80.2%를 독점했습니다. 이는 사실상 변수 1개만 보는 것과 같은 효과입니다.</li>
+    <li><b>표준화 후</b>: 모든 변수를 동일한 척도로 맞추자 PC1의 비중이 17.6%로 낮아지고, 여러 변수의 정보가 균형 있게 반영되었습니다.</li>
+    <li><b>Scree Plot</b>: 누적 설명 분산 80%를 달성하려면 주성분 7개가 필요함을 확인했습니다. → 단순 차원축소보다, 원본 특징을 직접 활용하는 분류 모델이 해석에 더 효율적이라는 판단의 근거가 되었습니다.</li>
+  </ul>
+  <div class="row">
+    <div class="img-box">
+      <img src="../outputs/figures/1_compare_standardization.png">
+    </div>
+    <div class="img-box">
+      <img src="../outputs/figures/2_scree_plot.png">
+    </div>
+  </div>
+  <div class="page-num">5</div>
+</div>
+
+<!-- Slide 5: PCA2 scatter/loadings -->
+<div class="slide">
+  <h1 class="slide-title">2-3. 방법 (Methods) - PCA: 논문 분포와 특징 구조</h1>
+  <ul>
+    <li><b>좌측 (산점도)</b>: PC1-PC2 평면에 논문들을 투영하여, 트렌드 수준에 따른 분포 경향성을 시각적으로 확인했습니다.</li>
+    <li><b>우측 (Loadings)</b>: 각 변수가 주성분 축을 구성하는 데 얼마나 기여하는지를 보여줍니다. 이를 통해 어떤 변수들이 서로 묶여 같은 의미축을 형성하는지 파악할 수 있었습니다.</li>
+  </ul>
+  <div class="img-full">
+    <img src="../outputs/figures/3_pca_scatter_loadings.png">
+  </div>
+  <div class="page-num">6</div>
+</div>
+
+<!-- Slide 6: Title Popularity Score -->
+<div class="slide">
+  <h1 class="slide-title">2-4. 방법 (Methods) - 제목 인기 점수(Title Popularity Score)</h1>
+  <ul>
+    <li>제목에 사용된 단어들의 빈도표를 기반으로, 각 논문 제목의 "인기 단어 사용도"를 점수화한 <span class="tag">Title_Popularity_Score</span>를 새로 만들었습니다.</li>
+    <li>이 점수를 포함해 16개 변수로 PCA를 재실행한 결과, <b>PC2 "인용·분야활동 규모 축"</b>에 가장 강하게 연관됨을 확인했습니다 (그래프의 빨간 테두리 표시, loading +0.39).</li>
+    <li>기존의 제목 길이/단어 수 변수와는 다른 정보를 담고 있었으나, 최종 모델에서는 핵심 8개 특징에 집중하기 위해 보류했습니다.</li>
+  </ul>
+  <div class="row" style="margin-top:6px;">
+    <div class="img-box">
+      <img src="../outputs/figures/word_frequency.png">
+      <div class="caption">제목 단어 빈도 분석 → Title Popularity Score 산출 기반</div>
+    </div>
+    <div class="img-box">
+      <img src="../outputs/figures/5_with_title_score.png">
+      <div class="caption">Title Popularity Score 추가 후 PCA 재실행 (PC2 연관성 확인)</div>
+    </div>
+  </div>
+  <div class="page-num">7</div>
+</div>
+
+<!-- Slide 7: 모델 설계 -->
+<div class="slide">
+  <h1 class="slide-title">3. 방법 (Methods) - 모델 설계</h1>
+  <h2 class="section">모델 선정 이유 및 수업 내용 적용</h2>
+  <ul>
+    <li><b>Decision Tree (Bagging 기저 학습기 / 해석용)</b>: 수업의 Bagging 파트에서 Bagging의 기저 학습기(base learner) 예시로 직접 다룬 모델입니다. 단독으로도 학습하여 배깅 적용 전/후 성능 향상을 비교하고, IF-THEN 규칙을 통한 Feature Importance 해석에 활용했습니다.</li>
+    <li><b>K-Nearest Neighbors (KNN)</b>: 수업에서 배운 거리 기반 분류 알고리즘으로, "비슷한 특성의 논문은 비슷한 트렌드를 가진다"는 가설 검증을 위한 베이스라인으로 선정했습니다. 비선형 결정 경계를 자연스럽게 처리할 수 있다는 특성을 적용했습니다.</li>
+    <li><b>Bagging &amp; AdaBoost (앙상블)</b>: 수업에서 배운 두 앙상블 기법을 적용했습니다. Bagging은 단일 의사결정트리의 높은 분산(Variance)·과적합을 감소시키고, AdaBoost는 약한 학습기를 순차적으로 보완하여 성능을 끌어올립니다.</li>
+  </ul>
+  <h2 class="section">파라미터 튜닝 및 설정 근거</h2>
+  <ul>
+    <li><b>Decision Tree</b>: <span class="tag">max_depth=8</span> — 깊이를 제한하는 사전 가지치기(Pre-pruning). depth 4→6→8로 실험하며 검증 F1이 8에서 안정화됨. <span class="tag">min_samples_leaf=50</span> — 리프 노드에 최소 50건(전체 데이터의 약 0.06%)을 요구하여 소수 노이즈 샘플에 과적합하는 것을 방지.</li>
+    <li><b>KNN</b>: <span class="tag">k=11</span> — 홀수로 설정하여 다수결 투표 시 동점(Tie) 방지. k=3, 5, 7, 9, 11을 비교하여 검증 F1이 가장 안정적인 k=11 채택. <span class="tag">StandardScaler</span> 필수 적용 — KNN은 거리 기반이라 피처 스케일 차이에 민감하므로 표준화 선행.</li>
+  </ul>
+  <div class="page-num">8</div>
+</div>
+
+<!-- Slide 8: 결과1 -->
+<div class="slide">
+  <h1 class="slide-title">4-1. 결과 (Results) - 클래스 분포 및 모델 성능</h1>
+  <ul>
+    <li>타겟 변수 <span class="tag">Avg_MA_7D</span>를 3분위수로 나눠 Low / Mid / High 클래스 균형을 확보했습니다 (각 ~27,550건).</li>
+    <li>핵심 8개 특징(분야 특징 포함) 사용 시 DecisionTree / Bagging이 F1(Macro) <b>0.81~0.83</b> 수준으로 가장 우수했습니다.</li>
+    <li>분야 특징(<span class="tag">Category_Covariance_norm</span>)을 제외하면 F1이 0.48로 급락 → "분야 정체성"이 트렌드를 결정하는 핵심 신호임을 정량적으로 확인했습니다.</li>
+  </ul>
+  <div class="row">
+    <div class="img-box">
+      <img src="../outputs/figures/final_1_class_distribution.png">
+    </div>
+    <div class="img-box">
+      <img src="../outputs/figures/final_2_model_comparison.png">
+    </div>
+  </div>
+  <div class="page-num">9</div>
+</div>
+
+<!-- Slide 9: 결과2 -->
+<div class="slide">
+  <h1 class="slide-title">4-2. 결과 (Results) - 혼동행렬 및 특징 중요도</h1>
+  <ul>
+    <li><b>혼동행렬 (좌)</b>: Low와 High 양극단은 비교적 잘 구분하지만, 중간(Mid) 클래스에서 일부 혼동이 발생합니다. 트렌드가 점진적으로 변화하는 특성이 반영된 결과입니다.</li>
+    <li><b>특징 중요도 (우)</b>: <span class="tag">Category_Covariance_norm</span>(약 0.68)이 가장 크고, <span class="tag">Days_Since_Update</span>(약 0.15), <span class="tag">Paper_Age_Years</span>(약 0.09) 순으로 나타났습니다.</li>
+  </ul>
+  <div class="img-full">
+    <img src="../outputs/figures/final_3_confusion_importance.png">
+  </div>
+  <div class="page-num">10</div>
+</div>
+
+<!-- Slide 10: 결과3 -->
+<div class="slide">
+  <h1 class="slide-title">4-3. 결과 (Results) - Decision Tree 구조 시각화</h1>
+  <ul>
+    <li>최상위 분기 기준이 <span class="tag">Category_Covariance_norm</span>으로 나타나, 분야 동조성이 트렌드 수준을 가르는 첫 번째 기준임을 시각적으로 확인할 수 있습니다.</li>
+    <li><span class="tag">max_depth=8</span>, <span class="tag">min_samples_leaf=50</span>으로 가지치기하여 과적합을 방지하면서도 해석 가능성을 확보했습니다.</li>
+  </ul>
+  <div class="img-full">
+    <img src="../outputs/figures/final_4_decision_tree.png">
+  </div>
+  <div class="page-num">11</div>
+</div>
+
+<!-- Slide 11: Time Split -->
+<div class="slide">
+  <h1 class="slide-title">4-4. 결과 (Results) - 현실 적용성 검증 (Time Split)</h1>
+  <p class="lead">랜덤 분할은 미래의 데이터가 과거를 예측하는 데 쓰이는 미래 참조(Data Leakage) 문제가 발생할 수 있습니다. 이를 검증하기 위해 <b>시간 기반 분할(과거 데이터로 미래 예측)</b>을 수행했습니다.</p>
+  <h2 class="section">검증 방식</h2>
+  <ul>
+    <li><b>학습(Train)</b>: 2026년 3월 이전 데이터 (61,842건)</li>
+    <li><b>테스트(Test)</b>: 2026년 4월 최신 데이터 (20,846건)</li>
+  </ul>
+  <div class="row">
+    <div style="flex:1;">
+      <h2 class="section">Time Split 평가 결과</h2>
+      <ul>
+        <li><b>DecisionTree F1</b>: 0.816 → <b>0.772</b> (현실 성능 방어 성공)</li>
+        <li><b>Bagging F1</b>: 0.829 → <b>0.780</b></li>
+      </ul>
+      <p class="lead" style="margin-top:10px;">새로운 미래의 달(4월) 데이터에 대해서도 78%의 F1 점수를 기록하며, 본 모델이 실제 프로덕션 환경에서도 안정적으로 트렌드를 예측할 수 있음을 입증했습니다.</p>
+    </div>
+    <div class="img-box">
+      <img src="../outputs/figures/time_split_comparison.png">
+    </div>
+  </div>
+  <div class="page-num">12</div>
+</div>
+
+<!-- Slide 12-5: 선형회귀 비교 분석 -->
+<div class="slide">
+  <h1 class="slide-title">4-5. 결과 (Results) — 선형회귀 비교 분석</h1>
+  <ul>
+    <li>동일한 8개 특징(full_feats)으로 <span class="tag">Avg_MA_7D</span>를 <b>연속값 그대로</b> 예측하는 선형회귀(수업에서 다룬 연속값 회귀 방식)를 추가 적용했습니다.</li>
+    <li><b>R² = 0.19</b> — 선택한 피처들이 연속값의 약 19%만 선형적으로 설명합니다. 피처와 트렌드 사이의 관계가 비선형(non-linear)임을 시사합니다.</li>
+    <li><b>분류 모델 F1 0.77~0.83 vs. 선형회귀 R² 0.19</b>: 정확한 연속값 예측보다 "Low/Mid/High 어느 구간인가"를 판별하는 비선형 분류 모델이 이 데이터에 더 적합합니다.</li>
+    <li><b>주요 계수</b>: <span class="tag">Category_Covariance_norm</span>(+20.2), <span class="tag">Title_Popularity_Score</span>(+16.9), <span class="tag">DOI_is_published</span>(−11.8) 순으로 영향력이 크지만, 분야 동조성과 트렌드의 관계 자체가 단순 선형이 아니어서 R²가 낮게 나타났습니다.</li>
+  </ul>
+  <div class="img-full">
+    <img src="../outputs/figures/final_5_linreg_comparison.png">
+  </div>
+  <div class="page-num">13</div>
+</div>
+
+<!-- Slide 13: 한계점 외삽 -->
+<div class="slide">
+  <h1 class="slide-title">5. 한계점 및 향후 개선점 - 외삽(Extrapolation) 문제</h1>
+  <ul>
+    <li>Decision Tree, KNN, AdaBoost의 회귀(Regressor) 버전으로 2026년 5월 논문 발생량 추세를 예측해 보았습니다.</li>
+    <li>실제 추세선은 계속 상승하지만, 트리/거리 기반 모델은 학습 데이터에서 본 값의 범위를 벗어나지 못해 5월 구간에서 값이 <b>평평하게(flatline)</b> 예측되었습니다.</li>
+    <li>이는 수업에서 배운 모델들이 훌륭한 분류기이지만, 미래의 새로운 추세를 "그려내는" 시계열 회귀 예측(Forecasting)에는 한계가 있음을 보여주는 사례입니다.</li>
+    <li><b>향후 개선</b>: 수업 범위 밖의 시계열 전용 모델(예: ARIMA, Autoregressive Integrated Moving Average) 등을 추가로 적용하면 미래 추세 예측 성능을 높일 수 있습니다.</li>
+  </ul>
+  <div class="row">
+    <div class="img-box">
+      <img src="../outputs/figures/may_trend_forecast.png">
+    </div>
+    <div class="img-box">
+      <img src="../outputs/figures/may_trend_class_models.png">
+    </div>
+  </div>
+  <div class="page-num">14</div>
+</div>
+
+<!-- Slide 13: 결론 -->
+<div class="slide">
+  <h1 class="slide-title">6. 결론 (Conclusion)</h1>
+  <h2 class="section">프로젝트 요약 및 인사이트</h2>
+  <ul>
+    <li><b>분야의 힘</b>: 논문 트렌드에 가장 큰 영향을 미치는 것은 "해당 논문이 어떤 분야에 속해 있는가" 였습니다. (<span class="tag">Category_Covariance_norm</span>의 중요도 0.710)</li>
+    <li><b>비선형성 확인</b>: 동일 피처로 선형회귀(R² = 0.19) vs. 분류 모델(F1 0.77~0.83) 비교 — 피처와 트렌드 간의 관계가 비선형임을 두 접근의 성능 차이로 직접 입증했습니다.</li>
+    <li><b>앙상블의 위력</b>: 수업에서 다룬 Bagging 기법이 단일 트리의 한계를 극복하고 예측률을 가장 높였습니다.</li>
+    <li><b>시계열 검증의 중요성</b>: Time Split 검증을 통해, 무작위 교차검증의 함정을 피하고 현실적인 성능 지표를 확보했습니다.</li>
+  </ul>
+  <h2 class="section">한계점 및 향후 개선점 (외삽 문제)</h2>
+  <ul>
+    <li><b>한계점 (Extrapolation Limit)</b>: 이번 프로젝트에서 배운 모델들(Tree, KNN)은 훌륭한 분류기이지만, 미래의 상승 추세(예: 5월 논문 발생량)를 그려내는 미래 예측(Forecasting)에는 적합하지 않았습니다. 학습 데이터에서 본 값의 범위를 벗어나지 못해 수평으로 뻗어버리는 한계가 확인되었습니다.</li>
+  </ul>
+  <div class="page-num">15</div>
+</div>
+
+<!-- Slide 14: Q&A -->
+<div class="slide title-slide">
+  <h1>감사합니다. Q&amp;A</h1>
+  <div class="page-num">16</div>
+</div>
+
+</body>
+</html>

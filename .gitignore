@@ -1,0 +1,35 @@
+# === 대용량 데이터 파일 ===
+data/*.csv
+outputs/csv/*.csv
+outputs/csv/*.json
+
+# === 환경 설정 ===
+src/merge/.env
+*.env
+*.env.*
+.env
+.env.*
+
+# === macOS 시스템 파일 ===
+.DS_Store
+**/.DS_Store
+
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# === Go ===
+*.exe
+*.out
+
+# === 불필요 파일 보관소 ===
+_archive/
+
+# === IDE ===
+.idea/
+.vscode/
+*.swp
+*.swo

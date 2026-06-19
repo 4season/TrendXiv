@@ -1,0 +1,162 @@
+{
+  "meta": {
+    "project_name": "arXiv 트렌드 데이터 마이닝 프로젝트",
+    "last_updated": "2026-06-12 (세션 3 — 최종 마무리)",
+    "status": "FINALIZED — 최종 모델 완료",
+    "purpose": "새 세션이 이 파일을 먼저 읽어 대화 맥락을 끊김 없이 이어가기 위함",
+    "persona": "June(준) — 주나(transgender woman, CS 전공)를 돕는 따뜻한 멘토. 가독성(난독증 배려) 높은 형식, 수업개념 근거 중시.",
+    "core_rules": [
+      "모든 작업은 PDF(수업내용)에 해당하는 개념에 근거해야 한다.",
+      "원본 데이터는 절대 훼손 금지 — 항상 새 파일로만 저장.",
+      "목표는 완벽함이 아니라 학생(주나)의 학습.",
+      "이미 data_flow.json과 md가 있으면 새로 만들지 말고 갱신만 한다.",
+      "그래프는 반드시 코드를 실행해서 PNG 이미지로 저장·전달. 위젯/시뮬레이션 생성 금지."
+    ]
+  },
+
+  "data_files": {
+    "original_readonly": {
+      "arxiv_trend_data_with_features.csv": "82,688행 × 12열. 원본 컬럼(Identifier, DOI, CitationCount, Created, Updated, Category, Title) + 기존 파생(Category_Similarity, Category_Covariance, Avg_MA_7D, Avg_Trend_Speed, Avg_Trend_Acceleration). 결측치 0개.",
+      "title_all_words_frequency.csv": "44,679행. 제목 단어별 빈도표. 상위: learning(9918), models(8278), language(6813).",
+      "DMweek13_merge.pdf": "수업 내용(텍스트). 전처리/정규화/공분산·상관/거리·코사인유사도/PCA·차원축소/이동평균·미분/가변수 등."
+    },
+    "derived": {
+      "arxiv_features_extended.csv": "기존 12열 + 새 특징 12열 = 24열. feature_engineering.py 산출물. 현재 작업 기준 파일.",
+      "arxiv_features_with_titlescore.csv": "위 파일 + Title_Popularity_Score = 25열. add_title_score.py 산출물."
+    },
+    "key_dates": {
+      "Created_range": "2006-05-18 ~ 2026-04-29 (대부분 2026 집중)",
+      "Updated_range": "2026-01-01 ~ 2026-04-30 (실질 분석기간 4개월)",
+      "collection_end": "2026-04-30",
+      "age_note": "논문의 96.9%가 0~6개월 신규 → 분기(0.25년) 단위 보정이 타당"
+    }
+  },
+
+  "project_goal": {
+    "confirmed": "CS 각 분야별 트렌딩(유행성) 예측 모델",
+    "target_variable": "Avg_MA_7D — 카테고리별 7일 이동평균 논문 수. 분야 활발도의 직접적 척도.",
+    "target_structure": "논문마다 다른 값(고유값 9,243개). 단 첫 카테고리 평균이 분산의 약 55%(eta^2=0.55)를 설명 → '분야 정체성'이 강한 신호. 따라서 분야특징(Category_Covariance)은 정규화로 보정 필요.",
+    "final_target_form": "Avg_MA_7D를 분위수 3등분 → Trend_Level (Low / Mid / High), 클래스 균형(각 ~27,5xx).",
+    "why_not_citation": "CitationCount는 논문 개별 영향력이며 시간편향 심함. 트렌드 목표와 거리 있음.",
+    "domain": "cs.* 분야 거의 전부 (82,684/82,688 = 99.99%). cs 태그가 전혀 없는 4건은 math.NA 단독 논문이라 제외 대상."
+  },
+
+  "feature_classification_FINAL": {
+    "kept_7_features": {
+      "reason": "타겟 누수 없음 + 최종 모델 입력",
+      "list": [
+        "DOI_avg_cite_rate — 시간편향 보정된 출판사 영향력",
+        "DOI_is_published — arXiv vs 정식출판 이분 가변수",
+        "Paper_Age_Years — 나이(통제변수)",
+        "Days_Since_Update — 최신성 신호 (모델 2위 중요도)",
+        "Title_Char_Count — 제목 글자 수",
+        "Title_Word_Count — 제목 단어 수",
+        "Category_Covariance_norm — 분야 내 정규화된 공분산 (모델 1위 중요도)"
+      ]
+    },
+    "removed_leakage": {
+      "reason": "타겟(Avg_MA_7D) 또는 이전 타겟(CitationCount) 파생 → 누수",
+      "list": [
+        "CitationCount — 이전 타겟",
+        "Citation_Rate_Annual — CitationCount 파생",
+        "Citation_Percentile — CitationCount 순위 변환",
+        "DOI_avg_citation — DOI_avg_cite_rate와 중복(corr 0.967)",
+        "Avg_Trend_Speed — Avg_MA_7D의 1차 미분 = 새 타겟 직접 파생",
+        "Avg_Trend_Acceleration — Avg_MA_7D의 2차 미분 = 새 타겟 직접 파생"
+      ]
+    },
+    "removed_redundant_or_lowinfo": {
+      "reason": "중복(다중공선성) 또는 저정보 → 최종 세트에서 제외",
+      "list": [
+        "DOI_freq — DOI_is_published와 corr -0.999 (사실상 중복)",
+        "Paper_Age_Days — Paper_Age_Years와 동일정보",
+        "Category_Similarity — communality 0.161 최하위(저정보). [정리] 이전 json이 keep/remove 양쪽에 중복 기재한 모순을 'remove(저정보)'로 확정.",
+        "DOI_Publisher — 문자열(파생용 중간 컬럼)"
+      ]
+    }
+  },
+
+  "covariance_confound_resolved": {
+    "issue": "Category_Covariance의 원본 corr 0.817 대부분이 AI/ML 분야 지배 효과",
+    "evidence_verified": {
+      "aiml_included": "논문 62.8% (태그에 cs.AI/LG/CV 포함 기준). 평균 Covariance=341, 평균 MA_7D=138",
+      "other_fields": "논문 37.2%. 평균 Covariance=34, 평균 MA_7D=32",
+      "raw_corr": "Cov vs MA_7D = 0.817 (실제 데이터로 검증됨)"
+    },
+    "normalization_decision": "Option B 채택 — Cov_norm = Cov / (첫 카테고리별 평균 Cov)",
+    "normalization_result_HONEST": "정규화 후 corr = 0.276 (첫 카테고리 평균 기준, 실제 재현값). [정정] 이전 json의 0.092는 어떤 그룹 정의로도 재현되지 않았음 → 0.276으로 정정. 정규화가 지배효과를 '완화'하지만 '완전 제거'하지는 않음.",
+    "interpretation": "정규화 후에도 0.276은 분야 간 상대적 동조성의 실제 신호. 모델에서 가장 중요한 특징으로 남되, '분야 규모' 거품은 제거됨."
+  },
+
+  "analyses_done": {
+    "feature_engineering": {
+      "script": "feature_engineering.py",
+      "bias_correction_effect": "보정 전 DOI_avg_citation vs 나이 +0.193 → 보정 후 DOI_avg_cite_rate vs 나이 +0.132 (검증됨)"
+    },
+    "pca_v1_15features": {
+      "script": "pca_analysis.py",
+      "standardization_finding": "표준화 전 PC1=80.2%(Category_Covariance 독점, 분산≈63,634) → 표준화 후 PC1=17.6%. [정정] 코드 주석의 'CitationCount가 PC1 독점' 예시는 틀렸음 → 실제 독점 변수는 Category_Covariance, 핵심 개념은 '범위'가 아니라 '분산'. 주석 수정 완료.",
+      "scree_finding": "누적 80% 도달에 PC 7개 필요 (검증됨)",
+      "note": "이 PCA는 '표준화 필요성' 데모용으로 15개(누수 포함) 사용 — 데모 목적에는 적절. 최종 모델 특징과는 별개."
+    },
+    "model_v1_15feat_citationcount_target": {
+      "note": "CitationCount 타겟 + 누수 포함 (학습용 참고만). LogReg f1≈0.995 = 누수 징후."
+    },
+    "model_v2_12feat_citationcount_target": {
+      "note": "누수 3개 제거 후 공정 버전. PCA n=6, 분산 81.8%. 성능 acc 0.48~0.58.",
+      "verified": "12-feature 표준화 PCA에서 PC6 누적 81.8% 정확히 재현됨."
+    },
+    "paper_age_analysis": {
+      "time_bias_verified": "나이 0-3개월 평균인용 2.1회 vs 5년+ 28.2회 (약 13.4배 차이). [정정] 이전 json의 '1.2 vs 26.8, 22배'는 실제 데이터와 불일치 → 2.1/28.2/13.4배로 정정.",
+      "conclusion": "Paper_Age_Years는 혼동변수이자 통제변수. 타겟을 Avg_MA_7D로 바꾸면 인용-나이 긴장이 해소됨.",
+      "age_dist": "전체 96.9%가 0-6개월 신규 (검증됨)."
+    }
+  },
+
+  "final_model": {
+    "script": "final_model.py",
+    "target": "Avg_MA_7D → 3단계 (Low/Mid/High), 분위수 균형 분할",
+    "features_full_7": ["DOI_avg_cite_rate","DOI_is_published","Paper_Age_Years","Days_Since_Update","Title_Char_Count","Title_Word_Count","Category_Covariance_norm"],
+    "pipeline": "fillna(0) → StandardScaler → train_test_split(0.2, stratify, seed=42) → 4개 분류기",
+    "results_full": {
+      "KNN_k11":        {"accuracy": 0.683, "f1_macro": 0.675},
+      "LogisticReg":    {"accuracy": 0.589, "f1_macro": 0.576},
+      "DecisionTree":   {"accuracy": 0.812, "f1_macro": 0.809},
+      "RandomForest":   {"accuracy": 0.811, "f1_macro": 0.809}
+    },
+    "results_intrinsic_only_6": {
+      "note": "분야특징(Category_Covariance_norm) 제외 — 분야특징 기여도 측정용 대조군",
+      "RandomForest":   {"accuracy": 0.493, "f1_macro": 0.480},
+      "DecisionTree":   {"accuracy": 0.492, "f1_macro": 0.473}
+    },
+    "key_insight": "분야특징 포함 시 f1 0.48 → 0.81 로 도약. 즉 '분야 수준 트렌드'는 주로 분야 동조성으로 결정되고, 논문 고유 특징(나이·최신성·제목 등)은 보조 신호. 누수 없음(f1≈1.0 아님) → 정직한 결과.",
+    "feature_importance_top3": ["Category_Covariance_norm(~0.68)", "Days_Since_Update(~0.15)", "Paper_Age_Years(~0.09)"],
+    "plots": ["final_1_class_distribution.png", "final_2_model_comparison.png", "final_3_confusion_importance.png"]
+  },
+
+  "corrections_log_session3": [
+    "domain 표기 100% → 99.99% (82,684/82,688) 정정",
+    "Category_Similarity의 keep/remove 모순 → 'remove(저정보)'로 확정",
+    "Covariance 정규화 후 corr 0.092 → 0.276 (재현값) 정정",
+    "paper_age 인용 1.2/26.8/22배 → 2.1/28.2/13.4배 정정",
+    "pca_analysis.py 주석: 'CitationCount가 PC1 독점/범위' → 'Category_Covariance/분산'으로 수정",
+    "최종 모델 확정(Avg_MA_7D 3분류, 클린 7특징, Option B 정규화 적용)"
+  ],
+
+  "session_log": [
+    {"date":"2026-06-10","summary":"특징 탐색, 시간축 문제, Category_Similarity=피어슨 상관 규명, DOI 방법 A/B/C 비교."},
+    {"date":"2026-06-12 세션1","summary":"feature_engineering.py 통합(새 특징 12개). PCA 분석. Title_Popularity_Score 통합."},
+    {"date":"2026-06-12 세션2","summary":"모델 학습(CitationCount 타겟 누수 비교). 특징 3분류. 타겟을 Avg_MA_7D로 전환 결정. Category_Covariance AI/ML 지배효과 발견."},
+    {"date":"2026-06-12 세션3","summary":"마무리: json 검증 후 4개 오류 정정(도메인 100%, Similarity 모순, 정규화 0.092→0.276, 나이 22배→13.4배). pca_analysis.py 주석 수정. 타겟 구조 진단(eta^2=0.55). 최종 모델 완성 — Avg_MA_7D 3분류, 클린 7특징, Option B 정규화 적용, 최고 DecisionTree/RandomForest f1=0.809. 분야특징 기여도(0.48→0.81) 정량화."}
+  ],
+
+  "deliverables_session3": [
+    "final_model.py — 최종 모델 스크립트",
+    "data_flow.json — 정정·갱신본",
+    "pca_analysis.py — 주석 수정본",
+    "프로젝트_진행정리.md — 최종 요약본",
+    "final_1_class_distribution.png / final_2_model_comparison.png / final_3_confusion_importance.png"
+  ],
+
+  "resume_instructions": "프로젝트는 FINALIZED 상태. 추가 작업 시: (1) 이 파일을 먼저 읽어 맥락 복원, (2) arxiv_features_extended.csv 기준, (3) final_model.py가 최종 파이프라인, (4) 그래프는 코드실행→PNG 저장 방식 유지."
+}
